@@ -83,19 +83,18 @@ def save_indexes(indexes):
 
 def main():
     directory = Path('data/books')
-    txt_files = list(directory.glob('*.txt'))
     json_files = list(directory.glob('*.json'))
 
     metas_by_ids = {}
     files_tokens = {}
     files_tok_pos = {}
-    for i in range(len(json_files)):
-        book_id = None
-        with open(json_files[i], 'r') as file:
+    for json_file in json_files:
+        with open(json_file, 'r') as file:
             data = json.load(file)
             book_id = data["id"]
             metas_by_ids[book_id] = data
-        with open(txt_files[i], 'r') as f:
+        txt_file = directory / f"{book_id}.txt"
+        with open(txt_file, 'r') as f:
             text = f.read()
             tokens = normalize(text)
             files_tokens[book_id] = tokens
