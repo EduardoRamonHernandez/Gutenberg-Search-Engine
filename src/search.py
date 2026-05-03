@@ -2,20 +2,18 @@
 
 from src.preprocess import normalize, tokenize_with_positions
 from src.index.inverted import InvertedIndex
-from src.index.permuterm import PermutermIndex
+from src.index.permuterm import PermutermTrie
 from src.index.proximity import PositionalIndex
 
-def detect_query_type(query: str) -> str:
+def _detect_query_type(query):
     if query.startswith('"') and query.endswith('"'):
         return "phrase"
     if "*" in query:
         return "wildcard"
     return "keyword"
 
-def search(query: str, inverted: InvertedIndex, 
-           permuterm: PermutermIndex, positional: PositionalIndex) -> list[dict]:
-    
-    qtype = detect_query_type(query)
+def search(query, inverted, permuterm, positional):
+    qtype = _detect_query_type(query)
     
     if qtype == "phrase":
         # Strip quotes, normalize each term, use positional index
@@ -25,7 +23,7 @@ def search(query: str, inverted: InvertedIndex,
     
     elif qtype == "wildcard":
         # Expand wildcard → matching vocab terms → inverted index
-        matching_terms = permuterm.wildcard_lookup(query.lower())
+        matching_terms = permuterm.wildcard_search(query.lower())
         doc_ids = inverted.search_or(list(matching_terms))
     
     else:
