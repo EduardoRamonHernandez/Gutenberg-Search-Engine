@@ -1,46 +1,61 @@
 # src/index/permuterm.py
-import bisect
 
-class PermutermIndex:
+class TrieNode:
     def __init__(self):
-        # sorted list of (rotation, original_term) pairs
-        self._rotations: list[tuple[str, str]] = []
+        self.children: dict[str, TrieNode] = {}
+        self.terms: set[str] = set()  # original terms that produced this rotation
 
-    def add_term(self, term: str):
-        """Generate all rotations of term$ and store them."""
+class PermutermTrie:
+    def __init__(self):
+        self.root = TrieNode()
+
+    def insert(self, term: str):
+        """Generate all rotations of term$ and insert into trie."""
         s = term + "$"
         for i in range(len(s)):
             rotation = s[i:] + s[:i]
-            bisect.insort(self._rotations, (rotation, term))
+            self._insert_rotation(rotation, term)
 
-    def wildcard_lookup(self, pattern: str) -> set[str]:
+    def _insert_rotation(self, rotation: str, original_term: str):
+        node = self.root
+        for char in rotation:
+            if char not in node.children:
+                node.children[char] = TrieNode()
+            node = node.children[char]
+        node.terms.add(original_term)
+
+    def prefix_search(self, prefix: str) -> set[str]:
+        """Find all original terms whose rotation starts with prefix."""
+        node = self.root
+        for char in prefix:
+            if char not in node.children:
+                return set()  # no matches
+            node = node.children[char]
+        # collect all terms in this subtree
+        return self._collect(node)
+
+    def _collect(self, node: TrieNode) -> set[str]:
+        """DFS to gather all terms stored in this subtree."""
+        results = node.terms.copy()
+        for child in node.children.values():
+            results |= self._collect(child)
+        return results
+
+    def wildcard_search(self, pattern: str) -> set[str]:
         """
-        Convert wildcard to rotation prefix and search.
-        Only handles single * for now.
+        Convert wildcard pattern to rotation prefix, then search.
+        Handles: hel* / *ing / hel*o
         """
         if "*" not in pattern:
-            return {pattern}
-        
+            return self.prefix_search(pattern + "$")
+
         left, right = pattern.split("*", 1)
-        # Rotate so the prefix we want is at the start
-        # hel* → search prefix "hel$"  (left + "$")
-        # *ing → search prefix "ing$"  (right + "$")  
-        # hel*o → search prefix "o$hel" (right + "$" + left)
+
         if not left:
-            prefix = right + "$"
+            prefix = right + "$"        
         elif not right:
-            prefix = left + "$"
+            prefix = left + "$"         
         else:
-            prefix = right + "$" + left
+            prefix = right + "$" + left 
 
-        return self._prefix_search(prefix)
-
-    def _prefix_search(self, prefix: str) -> set[str]:
-        """Binary search for all rotations starting with prefix."""
-        lo = bisect.bisect_left(self._rotations, (prefix,))
-        results = set()
-        for rot, term in self._rotations[lo:]:
-            if not rot.startswith(prefix):
-                break
-            results.add(term)
-        return results
+        return self.prefix_search(prefix)

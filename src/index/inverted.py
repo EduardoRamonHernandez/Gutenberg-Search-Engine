@@ -6,19 +6,19 @@ class InvertedIndex:
         self.index: dict[str, set[int]] = defaultdict(set)
         self.metadata: dict[int, dict] = {}  # id → {title, author}
 
-    def add_document(self, book_id: int, tokens: list[str], meta: dict):
+    def add_document(self, book_id, tokens, meta):
         self.metadata[book_id] = meta
         for token in tokens:
             self.index[token].add(book_id)
 
-    def search_and(self, terms: list[str]) -> set[int]:
+    def search_and(self, terms):
         """Intersect postings lists — all terms must appear."""
         if not terms:
             return set()
         sets = [self.index.get(t, set()) for t in terms]
         return set.intersection(*sets)
 
-    def search_or(self, terms: list[str]) -> set[int]:
+    def search_or(self, terms):
         """Union postings lists — any term matches."""
         result = set()
         for t in terms:

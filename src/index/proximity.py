@@ -3,9 +3,9 @@
 class PositionalIndex:
     def __init__(self):
         # token → {book_id → [position, position, ...]}
-        self.index: dict[str, dict[int, list[int]]] = {}
+        self.index = {}
 
-    def add_document(self, book_id: int, token_positions: list[tuple[str, int]]):
+    def add_document(self, book_id, token_positions: list[tuple[str, int]]):
         for token, pos in token_positions:
             if token not in self.index:
                 self.index[token] = {}
