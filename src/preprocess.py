@@ -2,7 +2,6 @@
 import nltk
 import pickle
 from pathlib import Path
-import collections
 import json
 from nltk.tokenize import word_tokenize
 from nltk.stem import PorterStemmer
@@ -46,9 +45,8 @@ def tokenize_with_positions(text):
 
 def build_inverted_index(files, meta):
     inverted_index = InvertedIndex()
-    keys = list(meta)
-    for i in range(len(files)):
-        inverted_index.add_document(keys[i], files[i], meta[keys[i]])
+    for book_id, tokens in files.items():
+        inverted_index.add_document(book_id, tokens, meta[book_id])
     return inverted_index
 
 def build_perm_trie(tokens):
@@ -75,6 +73,14 @@ def build_indexes(tokens_by_book_id, tok_pos, meta):
     pos_idx = build_positional_index(tok_pos)
     return [inv_idx, perm_trie, pos_idx]
     
+def save_indexes(indexes):
+    Path("data/indexes").mkdir(parents=True, exist_ok=True)
+
+    names = ["inverted", "permuterm", "positional"]
+    for name, idx in zip(names, indexes):
+        with open(f"data/indexes/{name}.pkl", "wb") as f:
+            pickle.dump(idx, f)
+
 def main():
     directory = Path('data/books')
     txt_files = list(directory.glob('*.txt'))
@@ -97,12 +103,7 @@ def main():
             files_tok_pos[book_id] = tok_pos
 
     indexes = build_indexes(files_tokens, files_tok_pos, metas_by_ids)
-    Path("data/indexes").mkdir(parents=True, exist_ok=True)
-
-    names = ["inverted", "permuterm", "positional"]
-    for name, idx in zip(names, indexes):
-        with open(f"data/indexes/{name}.pkl", "wb") as f:
-            pickle.dump(idx, f)
+    save_indexes(indexes)
 
 if __name__ == "__main__":
     main()

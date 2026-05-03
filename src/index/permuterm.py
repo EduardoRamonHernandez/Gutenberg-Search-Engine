@@ -9,14 +9,14 @@ class PermutermTrie:
     def __init__(self):
         self.root = TrieNode()
 
-    def insert(self, term: str):
+    def insert(self, term):
         """Generate all rotations of term$ and insert into trie."""
         s = term + "$"
         for i in range(len(s)):
             rotation = s[i:] + s[:i]
             self._insert_rotation(rotation, term)
 
-    def _insert_rotation(self, rotation: str, original_term: str):
+    def _insert_rotation(self, rotation, original_term):
         node = self.root
         for char in rotation:
             if char not in node.children:
@@ -24,7 +24,7 @@ class PermutermTrie:
             node = node.children[char]
         node.terms.add(original_term)
 
-    def prefix_search(self, prefix: str) -> set[str]:
+    def prefix_search(self, prefix):
         """Find all original terms whose rotation starts with prefix."""
         node = self.root
         for char in prefix:
@@ -34,14 +34,14 @@ class PermutermTrie:
         # collect all terms in this subtree
         return self._collect(node)
 
-    def _collect(self, node: TrieNode) -> set[str]:
+    def _collect(self, node):
         """DFS to gather all terms stored in this subtree."""
         results = node.terms.copy()
         for child in node.children.values():
             results |= self._collect(child)
         return results
 
-    def wildcard_search(self, pattern: str) -> set[str]:
+    def wildcard_search(self, pattern):
         """
         Convert wildcard pattern to rotation prefix, then search.
         Handles: hel* / *ing / hel*o
