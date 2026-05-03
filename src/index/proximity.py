@@ -5,7 +5,7 @@ class PositionalIndex:
         # token → {book_id → [position, position, ...]}
         self.index = {}
 
-    def add_document(self, book_id, token_positions: list[tuple[str, int]]):
+    def add_document(self, book_id, token_positions):
         for token, pos in token_positions:
             if token not in self.index:
                 self.index[token] = {}
@@ -13,7 +13,7 @@ class PositionalIndex:
                 self.index[token][book_id] = []
             self.index[token][book_id].append(pos)
 
-    def phrase_search(self, terms: list[str]) -> set[int]:
+    def phrase_search(self, terms):
         """
         Find books where terms appear consecutively.
         Core algorithm: for each candidate doc, check if any 
@@ -33,7 +33,7 @@ class PositionalIndex:
                 results.add(doc_id)
         return results
 
-    def _consecutive_positions(self, doc_id: int, terms: list[str]) -> bool:
+    def _consecutive_positions(self, doc_id, terms):
         """Check if terms appear in sequence at any position in this doc."""
         first_positions = self.index[terms[0]][doc_id]
         for start_pos in first_positions:
