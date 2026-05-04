@@ -46,6 +46,12 @@
   opacity: 0.85;
 }
 
+.result-count {
+  margin-top: 20px;
+  color: var(--text);
+  font-size: 14px;
+}
+
 .results {
   list-style: none;
   padding: 0;
