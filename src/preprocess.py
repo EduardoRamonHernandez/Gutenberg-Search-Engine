@@ -3,6 +3,12 @@ import nltk
 import pickle
 from pathlib import Path
 import json
+
+# Download required NLTK data if not already present
+nltk.download("stopwords", quiet=True)
+nltk.download("punkt", quiet=True)
+nltk.download("punkt_tab", quiet=True)
+
 from nltk.tokenize import word_tokenize
 from nltk.stem import PorterStemmer
 from nltk.corpus import stopwords
@@ -89,12 +95,12 @@ def main():
     files_tokens = {}
     files_tok_pos = {}
     for json_file in json_files:
-        with open(json_file, 'r') as file:
+        with open(json_file, 'r', encoding="utf-8") as file:
             data = json.load(file)
             book_id = data["id"]
             metas_by_ids[book_id] = data
         txt_file = directory / f"{book_id}.txt"
-        with open(txt_file, 'r') as f:
+        with open(txt_file, 'r', encoding="utf-8") as f:
             text = f.read()
             tokens = normalize(text)
             files_tokens[book_id] = tokens
