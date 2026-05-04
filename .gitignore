@@ -220,3 +220,6 @@ __marimo__/
 # Node
 node_modules/
 frontend/dist/
+
+# Generated data — books and indexes are re-downloadable/re-buildable
+data/

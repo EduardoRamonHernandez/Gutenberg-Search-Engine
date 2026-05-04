@@ -7,7 +7,8 @@ A search engine over public domain books from [Project Gutenberg](https://www.gu
 ## Requirements
 
 - Python 3.10+
-- pip packages: `nltk`, `requests`
+- Node.js 18+
+- pip packages: `nltk`, `requests`, `fastapi`, `uvicorn`
 
 ---
 
@@ -51,13 +52,29 @@ python -m src.preprocess
 
 ### Step 3 — Search
 
-Launch the interactive search interface:
+**Option A — Browser UI**
+
+Start the API backend (from project root):
+```bash
+uvicorn src.api:app --reload --port 8000
+```
+
+In a second terminal, start the frontend:
+```bash
+cd frontend
+npm install   # first time only
+npm run dev
+```
+
+Open `http://localhost:5173` in your browser.
+
+**Option B — CLI**
 
 ```bash
 python -m src.main
 ```
 
-You'll see a menu prompt. Enter your query and press Enter. Type `exit` to quit.
+Enter your query and press Enter. Type `exit` to quit.
 
 ---
 
