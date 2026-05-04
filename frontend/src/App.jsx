@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import './App.css'
 
 export default function App() {
   const [query, setQuery] = useState('')
@@ -9,6 +10,7 @@ export default function App() {
     e.preventDefault()
     if (!query.trim()) return
     setLoading(true)
+    setQuery('')
     const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`)
     const data = await res.json()
     setResults(data.results)
@@ -16,14 +18,14 @@ export default function App() {
   }
 
   return (
-    <div>
+    <div className="app">
       <h1>Gutenberg Search</h1>
-      <form onSubmit={handleSearch}>
+      <form className="search-form" onSubmit={handleSearch}>
         <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search..." />
         <button type="submit">Search</button>
       </form>
       {loading && <p>Loading...</p>}
-      <ul>
+      <ul className="results">
         {results.map(r => (
           <li key={r.id}>{r.title} — {r.author}</li>
         ))}
