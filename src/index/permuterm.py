@@ -54,7 +54,7 @@ class PermutermTrie:
         if not left:
             prefix = right + "$"        
         elif not right:
-            prefix = left + "$"         
+            prefix = "$" + left
         else:
             prefix = right + "$" + left 
 
