@@ -223,3 +223,4 @@ frontend/dist/
 
 # Generated data — books and indexes are re-downloadable/re-buildable
 data/
+books_list.txt
