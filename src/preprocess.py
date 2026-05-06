@@ -53,6 +53,7 @@ def build_inverted_index(files, meta):
     inverted_index = InvertedIndex()
     for book_id, tokens in files.items():
         inverted_index.add_document(book_id, tokens, meta[book_id])
+    inverted_index.compute_idf()
     return inverted_index
 
 def build_perm_trie(tokens):

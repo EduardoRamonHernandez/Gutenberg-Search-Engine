@@ -14,21 +14,19 @@ def _detect_query_type(query):
 
 def search(query, inverted, permuterm, positional):
     qtype = _detect_query_type(query)
-    
+
     if qtype == "phrase":
-        # Strip quotes, normalize each term, use positional index
         raw = query.strip('"')
         terms = normalize(raw)
         doc_ids = positional.phrase_search(terms)
-    
+        return [{"score": None, **inverted.metadata[d]} for d in doc_ids]
+
     elif qtype == "wildcard":
-        # Expand wildcard → matching vocab terms → inverted index
         matching_terms = permuterm.wildcard_search(query.lower())
         doc_ids = inverted.search_or(list(matching_terms))
-    
-    else:
-        # AND search on all normalized terms
-        terms = normalize(query)
-        doc_ids = inverted.search_and(terms)
+        return [{"score": None, **inverted.metadata[d]} for d in doc_ids]
 
-    return [inverted.metadata[d] for d in doc_ids]
+    else:
+        terms = normalize(query)
+        scored = inverted.score_and(terms)[:15]
+        return [{"score": round(score, 4), **inverted.metadata[d]} for d, score in scored]

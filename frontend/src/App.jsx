@@ -38,7 +38,12 @@ export default function App() {
       )}
       <ul className="results">
         {results.map(r => (
-          <li key={r.id}>{r.title} — {r.author}</li>
+          <li key={r.id}>
+            {r.title} — {r.author}
+            {r.score !== null && r.score !== undefined && (
+              <span className="score"> (score: {r.score})</span>
+            )}
+          </li>
         ))}
       </ul>
     </div>

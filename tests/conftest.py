@@ -28,6 +28,7 @@ def _build_indexes():
         tok_pos = tokenize_with_positions(text)
         inverted.add_document(book_id, tokens, BOOKS[book_id])
         positional.add_document(book_id, tok_pos)
+    inverted.compute_idf()
     for term in inverted.index:
         permuterm.insert(term)
     return inverted, permuterm, positional

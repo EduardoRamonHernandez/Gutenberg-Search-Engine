@@ -34,3 +34,39 @@ def test_result_shape(client):
         assert "id" in r
         assert "title" in r
         assert "author" in r
+        assert "score" in r
+
+
+def test_keyword_results_have_numeric_scores(client):
+    res = client.get("/api/search", params={"q": "ahab"})
+    results = res.json()["results"]
+    for r in results:
+        assert isinstance(r["score"], float)
+
+
+def test_keyword_results_sorted_by_score_descending(client):
+    res = client.get("/api/search", params={"q": "ahab"})
+    results = res.json()["results"]
+    scores = [r["score"] for r in results]
+    assert scores == sorted(scores, reverse=True)
+
+
+def test_keyword_top_result_is_most_relevant(client):
+    # "gatsby" only appears in book 3 — must be rank 1
+    res = client.get("/api/search", params={"q": "gatsby"})
+    results = res.json()["results"]
+    assert results[0]["id"] == 3  # book 3 = Gatsby
+
+
+def test_phrase_results_have_null_score(client):
+    res = client.get("/api/search", params={"q": '"white whale"'})
+    results = res.json()["results"]
+    for r in results:
+        assert r["score"] is None
+
+
+def test_wildcard_results_have_null_score(client):
+    res = client.get("/api/search", params={"q": "dracul*"})
+    results = res.json()["results"]
+    for r in results:
+        assert r["score"] is None

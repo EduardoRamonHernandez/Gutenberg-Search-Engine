@@ -1,78 +1,101 @@
-# evaluate.py — MRR evaluation for the Gutenberg search engine
+# evaluate.py
 import pickle
 from src.preprocess import normalize
 from src.search import search
 
-# All correct book IDs verified to be in the index before running.
-# Phrase queries marked [stopword] contain a stopword between content words
-# and are specifically testing the positional-index stopword fix.
-TEST_QUERIES = [
-    # --- keyword queries ---
-    ("raskolnikov",  {2554}),     # Crime and Punishment
-    ("gatsby",       {64317}),    # The Great Gatsby
-    ("karamazov",    {28054}),    # The Brothers Karamazov
-    ("zarathustra",  {1998}),     # Thus Spake Zarathustra
-    ("huckleberry",  {76}),       # Adventures of Huckleberry Finn
-    ("dracula",      {345}),      # Dracula
-    ("beowulf",      {16328}),    # Beowulf
-    ("odysseus",     {1727}),     # The Odyssey
-    ("leviathan",    {3207}),     # Leviathan
-    ("gregor",       {5200}),     # Metamorphosis (Gregor Samsa)
+# Keyword queries: (query, correct_book_ids)
+# Results are now TF-IDF ranked — we measure P@1 (is #1 result correct?)
+# and MRR (rank of first correct result).
+KEYWORD_QUERIES = [
+    ("raskolnikov",  {2554}),
+    ("gatsby",       {64317}),
+    ("karamazov",    {28054}),
+    ("zarathustra",  {1998}),
+    ("huckleberry",  {76}),
+    ("dracula",      {345}),
+    ("beowulf",      {16328}),
+    ("odysseus",     {1727}),
+    ("leviathan",    {3207}),
+    ("gregor",       {5200}),
+]
 
-    # --- phrase queries (no stopwords between content words) ---
-    ('"dorian gray"',       {174}),           # The Picture of Dorian Gray
-    ('"sherlock holmes"',   {1661, 244, 2852}),# any Doyle book
-    ('"great expectations"',{1400}),           # Great Expectations
+# Phrase queries: unranked, measure retrieval only (found yes/no)
+PHRASE_QUERIES = [
+    ('"dorian gray"',        {174}),
+    ('"sherlock holmes"',    {1661, 244, 2852}),
+    ('"great expectations"', {1400}),
+    ('"war and peace"',      {2600}),   # stopword test
+    ('"jekyll and hyde"',    {43}),     # stopword test
+]
 
-    # --- phrase queries testing stopword fix ---
-    ('"war and peace"',     {2600}),  # [stopword] "and" between war/peace
-    ('"jekyll and hyde"',   {43}),    # [stopword] "and" between jekyll/hyde
-
-    # --- wildcard queries ---
-    ("dracul*",     {345}),       # Dracula
-    ("karamaz*",    {28054}),     # The Brothers Karamazov
-    ("zarathustr*", {1998}),      # Thus Spake Zarathustra
-    ("huckleberr*", {76}),        # Adventures of Huckleberry Finn
-    ("raskolnik*",  {2554}),      # Crime and Punishment
+# Wildcard queries: unranked, measure retrieval only
+WILDCARD_QUERIES = [
+    ("dracul*",     {345}),
+    ("karamaz*",    {28054}),
+    ("zarathustr*", {1998}),
+    ("huckleberr*", {76}),
+    ("raskolnik*",  {2554}),
 ]
 
 
-def evaluate():
+def load_indexes():
     with open("data/indexes/inverted.pkl", "rb") as f:
         inverted = pickle.load(f)
     with open("data/indexes/permuterm.pkl", "rb") as f:
         permuterm = pickle.load(f)
     with open("data/indexes/positional.pkl", "rb") as f:
         positional = pickle.load(f)
+    return inverted, permuterm, positional
 
-    rows = []
-    for query, correct_ids in TEST_QUERIES:
+
+def evaluate():
+    inverted, permuterm, positional = load_indexes()
+
+    # --- Keyword: P@1 and MRR ---
+    kw_rows = []
+    for query, correct_ids in KEYWORD_QUERIES:
+        results = search(query, inverted, permuterm, positional)
+        p_at_1 = len(results) > 0 and results[0]["id"] in correct_ids
+        rr = 0.0
+        for rank, r in enumerate(results, start=1):
+            if r["id"] in correct_ids:
+                rr = 1.0 / rank
+                break
+        title = inverted.metadata.get(next(iter(correct_ids)), {}).get("title", "?")
+        top = results[0]["title"][:30] if results else "—"
+        kw_rows.append({"query": query, "correct": title, "p1": p_at_1, "rr": rr,
+                        "n": len(results), "top": top})
+
+    # --- Phrase + Wildcard: retrieval only ---
+    other_rows = []
+    for query, correct_ids in PHRASE_QUERIES + WILDCARD_QUERIES:
         results = search(query, inverted, permuterm, positional)
         result_ids = {r["id"] for r in results}
         found = bool(correct_ids & result_ids)
-        rr = 1.0 if found else 0.0
-        correct_title = inverted.metadata.get(next(iter(correct_ids)), {}).get("title", "?")
-        rows.append({
-            "query":   query,
-            "correct": correct_title,
-            "found":   found,
-            "n":       len(results),
-            "rr":      rr,
-        })
+        title = inverted.metadata.get(next(iter(correct_ids)), {}).get("title", "?")
+        other_rows.append({"query": query, "correct": title, "found": found, "n": len(results)})
 
-    mrr = sum(r["rr"] for r in rows) / len(rows)
-    return mrr, rows
+    p_at_1 = sum(r["p1"] for r in kw_rows) / len(kw_rows)
+    mrr     = sum(r["rr"] for r in kw_rows) / len(kw_rows)
+    retrieval = sum(r["found"] for r in other_rows) / len(other_rows)
+
+    return kw_rows, other_rows, p_at_1, mrr, retrieval
 
 
 if __name__ == "__main__":
-    mrr, rows = evaluate()
-    n_correct = sum(r["found"] for r in rows)
+    kw_rows, other_rows, p_at_1, mrr, retrieval = evaluate()
 
-    print(f"\n{'Query':<30} {'Expected':<35} {'Found':<6} N")
-    print("-" * 80)
-    for r in rows:
-        mark = "YES" if r["found"] else "NO "
-        print(f"{r['query']:<30} {r['correct'][:33]:<35} {mark:<6} {r['n']}")
+    print("\n=== KEYWORD QUERIES (TF-IDF ranked) ===")
+    print(f"{'Query':<20} {'Expected':<30} {'Top Result':<32} P@1   RR    N")
+    print("-" * 100)
+    for r in kw_rows:
+        print(f"{r['query']:<20} {r['correct'][:28]:<30} {r['top']:<32} "
+              f"{'YES' if r['p1'] else 'NO ':<6}{r['rr']:.2f}  {r['n']}")
+    print(f"\nP@1: {p_at_1:.3f}   MRR: {mrr:.3f}")
 
+    print("\n=== PHRASE + WILDCARD QUERIES (unranked retrieval) ===")
+    print(f"{'Query':<30} {'Expected':<35} {'Found':<6} N")
     print("-" * 80)
-    print(f"\nMRR: {mrr:.3f}  ({n_correct}/{len(rows)} queries retrieved correct book)\n")
+    for r in other_rows:
+        print(f"{r['query']:<30} {r['correct'][:33]:<35} {'YES' if r['found'] else 'NO ':<6} {r['n']}")
+    print(f"\nRetrieval rate: {retrieval:.3f}  ({sum(r['found'] for r in other_rows)}/{len(other_rows)})")
