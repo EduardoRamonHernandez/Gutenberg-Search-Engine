@@ -46,7 +46,7 @@ def tokenize_with_positions(text):
         if tok.isalpha():
             if tok not in STOPWORDS:
                 result.append((stemmer.stem(tok), pos))
-            pos += 1  # count ALL words for position, even stopwords
+                pos += 1  # only advance position for kept tokens
     return result
 
 def build_inverted_index(files, meta):

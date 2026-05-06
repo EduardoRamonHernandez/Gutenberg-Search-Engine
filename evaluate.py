@@ -1,37 +1,39 @@
 # evaluate.py — MRR evaluation for the Gutenberg search engine
 import pickle
-from src.preprocess import normalize  # triggers nltk downloads if needed
+from src.preprocess import normalize
 from src.search import search
 
-# (query, set of correct book IDs)
-# Phrase queries only use adjacent content words (no stopwords between them)
-# so the positional index consecutive-position check can find them.
+# All correct book IDs verified to be in the index before running.
+# Phrase queries marked [stopword] contain a stopword between content words
+# and are specifically testing the positional-index stopword fix.
 TEST_QUERIES = [
     # --- keyword queries ---
-    ("raskolnikov",   {2554}),        # Crime and Punishment
-    ("gatsby",        {64317}),       # The Great Gatsby
-    ("ahab",          {2701}),        # Moby Dick
-    ("karamazov",     {28054}),       # The Brothers Karamazov
-    ("zarathustra",   {1998}),        # Thus Spake Zarathustra
-    ("huckleberry",   {76}),          # Adventures of Huckleberry Finn
-    ("dracula",       {345}),         # Dracula
-    ("beowulf",       {16328}),       # Beowulf
-    ("odysseus",      {1727}),        # The Odyssey
-    ("leviathan",     {3207}),        # Leviathan
+    ("raskolnikov",  {2554}),     # Crime and Punishment
+    ("gatsby",       {64317}),    # The Great Gatsby
+    ("karamazov",    {28054}),    # The Brothers Karamazov
+    ("zarathustra",  {1998}),     # Thus Spake Zarathustra
+    ("huckleberry",  {76}),       # Adventures of Huckleberry Finn
+    ("dracula",      {345}),      # Dracula
+    ("beowulf",      {16328}),    # Beowulf
+    ("odysseus",     {1727}),     # The Odyssey
+    ("leviathan",    {3207}),     # Leviathan
+    ("gregor",       {5200}),     # Metamorphosis (Gregor Samsa)
 
-    # --- phrase queries (adjacent content words only) ---
-    ('"white whale"',    {2701}),     # Moby Dick
-    ('"captain ahab"',   {2701}),     # Moby Dick
-    ('"dorian gray"',    {174}),      # The Picture of Dorian Gray
-    ('"sherlock holmes"',{1661, 244, 2852}),  # any Doyle book
-    ('"moby dick"',      {2701}),     # Moby Dick
+    # --- phrase queries (no stopwords between content words) ---
+    ('"dorian gray"',       {174}),           # The Picture of Dorian Gray
+    ('"sherlock holmes"',   {1661, 244, 2852}),# any Doyle book
+    ('"great expectations"',{1400}),           # Great Expectations
+
+    # --- phrase queries testing stopword fix ---
+    ('"war and peace"',     {2600}),  # [stopword] "and" between war/peace
+    ('"jekyll and hyde"',   {43}),    # [stopword] "and" between jekyll/hyde
 
     # --- wildcard queries ---
-    ("dracul*",      {345}),          # Dracula
-    ("karamaz*",     {28054}),        # The Brothers Karamazov
-    ("zarathustr*",  {1998}),         # Thus Spake Zarathustra
-    ("huckleberr*",  {76}),           # Huckleberry Finn
-    ("raskolnik*",   {2554}),         # Crime and Punishment
+    ("dracul*",     {345}),       # Dracula
+    ("karamaz*",    {28054}),     # The Brothers Karamazov
+    ("zarathustr*", {1998}),      # Thus Spake Zarathustra
+    ("huckleberr*", {76}),        # Adventures of Huckleberry Finn
+    ("raskolnik*",  {2554}),      # Crime and Punishment
 ]
 
 
@@ -48,8 +50,6 @@ def evaluate():
         results = search(query, inverted, permuterm, positional)
         result_ids = {r["id"] for r in results}
         found = bool(correct_ids & result_ids)
-        # Results are unranked (returned as a set), so reciprocal rank is
-        # 1 if the correct book was retrieved at all, 0 otherwise.
         rr = 1.0 if found else 0.0
         correct_title = inverted.metadata.get(next(iter(correct_ids)), {}).get("title", "?")
         rows.append({
