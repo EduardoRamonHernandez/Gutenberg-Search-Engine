@@ -1,6 +1,6 @@
 # Gutenberg Search Engine
 
-A search engine over public domain books from [Project Gutenberg](https://www.gutenberg.org/), built using the [Gutendex API](https://gutendex.com/). Supports keyword, wildcard, and phrase search across a corpus of downloaded books.
+A search engine over public domain books from [Project Gutenberg](https://www.gutenberg.org/), built using the [Gutendex API](https://gutendex.com/). Supports keyword, wildcard, and phrase search across a corpus of downloaded books. Keyword results are ranked by TF-IDF with field-weighted title boosting.
 
 ---
 
@@ -8,7 +8,7 @@ A search engine over public domain books from [Project Gutenberg](https://www.gu
 
 - Python 3.10+
 - Node.js 18+
-- pip packages: `nltk`, `requests`, `fastapi`, `uvicorn`
+- pip packages listed in `requirements.txt`
 
 ---
 
@@ -20,11 +20,7 @@ A search engine over public domain books from [Project Gutenberg](https://www.gu
 pip install -r requirements.txt
 ```
 
-**2. Download required NLTK data**
-
-```bash
-python -c "import nltk; nltk.download('punkt'); nltk.download('punkt_tab'); nltk.download('stopwords')"
-```
+NLTK data (stopwords, tokenizer) is downloaded automatically on first run.
 
 ---
 
@@ -32,15 +28,15 @@ python -c "import nltk; nltk.download('punkt'); nltk.download('punkt_tab'); nltk
 
 ### Step 1 — Download books
 
-Fetch books from the Gutendex API and save them to `data/books/`. Use `--count` to set how many books to download (default: 5).
+Fetch books from the Gutendex API and save them to `data/books/`. Use `--count` to set how many books to download.
 
 ```bash
-python -m src.download --count 5
+python -m src.download --count 100
 ```
 
 Books are saved as `data/books/<id>.txt` and `data/books/<id>.json` (metadata).
 
-> Note: The `data/` directory is gitignored. The repo includes 5 pre-downloaded books and pre-built indexes, so you can skip steps 1–2 and go straight to searching if you just want to try it out.
+> Note: `data/` is gitignored — books and indexes must be generated locally.
 
 ### Step 2 — Build indexes
 
@@ -82,19 +78,11 @@ Enter your query and press Enter. Type `exit` to quit.
 
 The search engine auto-detects the query type based on syntax:
 
-| Type | Syntax | Example |
-|------|--------|---------|
-| Keyword | Plain text (AND across all terms) | `whale ocean` |
-| Wildcard | Contains `*` | `wom*n` or `*ing` |
-| Phrase | Wrapped in double quotes | `"to be or not to be"` |
-
-**Examples:**
-
-```
-shakespeare
-wom*n
-"it was the best of times"
-```
+| Type | Syntax | Example | Ranking |
+|------|--------|---------|---------|
+| Keyword | Plain text (AND across all terms) | `whale ocean` | TF-IDF scored, top 15 returned |
+| Wildcard | Contains `*` | `wom*n` or `*ing` | Unranked |
+| Phrase | Wrapped in double quotes | `"crime and punishment"` | Unranked |
 
 ---
 
@@ -105,14 +93,17 @@ src/
   download.py      # Gutendex API fetcher
   preprocess.py    # Tokenization, stemming, index building
   search.py        # Query parser and search dispatcher
+  api.py           # FastAPI backend
   main.py          # Interactive CLI entry point
   index/
-    inverted.py    # Inverted index (keyword search)
+    inverted.py    # Inverted index with TF-IDF scoring and title boosting
     permuterm.py   # Permuterm trie (wildcard search)
     proximity.py   # Positional index (phrase search)
+frontend/
+  src/App.jsx      # React search UI
 data/
-  books/           # Downloaded .txt and .json files
-  indexes/         # Serialized .pkl index files
+  books/           # Downloaded .txt and .json files (gitignored)
+  indexes/         # Serialized .pkl index files (gitignored)
 tests/             # pytest unit tests
 ```
 
