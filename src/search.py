@@ -4,6 +4,15 @@ from src.preprocess import normalize, tokenize_with_positions
 from src.index.inverted import InvertedIndex
 from src.index.permuterm import PermutermTrie
 from src.index.proximity import PositionalIndex
+from nltk.stem import PorterStemmer
+
+_stemmer = PorterStemmer()
+
+def _stem_wildcard(pattern):
+    """Stem each non-wildcard segment so the pattern matches stemmed trie tokens."""
+    parts = pattern.split("*")
+    stemmed = [_stemmer.stem(p) if p else p for p in parts]
+    return "*".join(stemmed)
 
 def _detect_query_type(query):
     if query.startswith('"') and query.endswith('"'):
@@ -22,7 +31,7 @@ def search(query, inverted, permuterm, positional):
         return [{"score": None, **inverted.metadata[d]} for d in doc_ids]
 
     elif qtype == "wildcard":
-        matching_terms = permuterm.wildcard_search(query.lower())
+        matching_terms = permuterm.wildcard_search(_stem_wildcard(query.lower()))
         doc_ids = inverted.search_or(list(matching_terms))
         return [{"score": None, **inverted.metadata[d]} for d in doc_ids]
 
